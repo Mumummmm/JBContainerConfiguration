@@ -1,2 +1,46 @@
 # JBContainerConfiguration
-3.12 基于java的容器配置
+###3.12 基于java的容器配置
+
+####3.12.1 基本概念：@Bean和@Configuration
+
+Spring中基于Java的配置的核心内容是@Configuration注解的类和@Bean注解的方法。
+
+@Bean注解用于表明一个方法将实例化、配置和初始化一个由SpringIOC容器管理的新对象。这就象在XML中元素一样。你可以在任何Spring @Component中使用@Bean注解方法，但大多数情况下，@Bean是配合@Configuration使用的。
+
+使用@Configuration注解类表明这个类的目的就是作为bean定义的地方。此外，@Configuration类内部的bean可以调用本类中定义的其它bean作为依赖。最简单的配置如下所示：（AppConfig）
+
+上面的AppConfig类和下面的XML是等价的:(Spring.xml)
+
+Full@Componet vs 'lite' @Beans mode
+
+当@Bean方法在没有用@Configuration注解的类中声明时，它们被称为以lite模式处理。例如，在@Component或甚至在plain old class中声明的bean方法被认为是lite。
+
+与完整的@Configuration不同，lite@Bean方法不能轻易地声明Bean之间的依赖关系。通常一个@Bean方法在lite模式下操作时不应该调用另一个@Bean方法。
+
+只有在@Configuration类中使用@Bean方法是一种推荐的方法，可以确保始终使用full模式。这将防止相同的@Bean方法被意外地多次调用，并且有助于减少在lite模式下操作时难以跟踪的微小错误。
+
+@Bean和@Configuration注解将在下面的章节中深入讨论。首先，我们将介绍使用基于java代码的配置来创建一个spring容器的各种方法。
+
+####3.12.2使用AnnotationConfigApplicationContext实例化Spring容器
+
+AnnotationConfigApplicationContext部分，是Spring3.0中新增的。这是一个强大的ApplicationContext实现，不仅能解析@Configuration注解类，也能解析@Component注解的类和使用JSR-330注解的类。
+
+当使用@Configuration类作为输入时，@Configuration类本身被注册为一个bean定义，类中所有声明的@Bean方法也被注册为bean定义
+
+当提供@Component和JSR-330类时，它们被注册为bean定义，并且假定在必要时在这些类中使用DI元数据，例如@Autowired或@Inject。
+
+Spring以XML作为配置元数据实例化一个ClassPathXmlApplicationContext，以@Configuration类作为配置元数据时，Spring以差不多的方式，实例化一个AnnotationConfigApplicationContext。因此，Spring容器可以实现零XML配置。（Main）
+
+如上所述，AnnotationConfigApplicationContext不限于只使用@Configuration类，任何@Component或JSR-330注解的类都能被提供给这个构造方法。
+
+AnnotationConfigApplicationContext可以通过无参构造函数实例化，然后调用register方法进行配置。这种方法以编程方式构建一个AnnotationConfigApplicationContext是特别有用。(Main)
+
+同样地，AnnotationConfigApplicationContext暴露的scan方法也允许扫描组件，完成同样的功能。（Main）
+
+要启用组件扫描，只要像下面这样配置@Configuration类即可：（AppConfig）
+
+有经验的用户可能更熟悉等价的XML形式配置。（Spring.xml）
+
+请记住，@Configuration类是被@Component元注解注解的类，所以它们也会被扫描到上面的例子中，假设AppConfig定义在com.pansy包中（或更深的包中），调用scan时也会被扫描到，并且它里面配置的所以@Bean方法会在refresh的时候被注册到容器中。
+
+一个WebApplicationContext与AnnotationConfigApplicationContext的变种是AnnotationConfigWebApplicationContext。这个实现可以用于配置Spring ContextLoaderListener servlet监听器，Spring MVC的DispatcherServlet等时使用。下面是一个web.xml代码片段，用于配置典型的Spring MVC Web应用程序。注意contextClass类的context-param和init-param
